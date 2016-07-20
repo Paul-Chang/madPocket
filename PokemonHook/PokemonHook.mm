@@ -76,9 +76,8 @@ static RockerControlView *gameRockerView;
 
 @implementation CLLocation (Swizzle)
 
-//SF
-static float x = -36.851638;
-static float y = 174.765068;
+static float x = 37.7883923;
+static float y = -122.4076413;
 
 static float version = 167141100;
 
@@ -187,12 +186,17 @@ static float version = 167141100;
     return self;
 }
 
+/* declare direction buttons as global variables */
+UIButton *up ;
+UIButton *down ;
+UIButton *left ;
+UIButton *right ;
 - (void)initUI {
 
     self.frame = CGRectMake(60, 20, 150, 150);
     self.backgroundColor = [UIColor clearColor];
 
-    UIButton *up = [[UIButton alloc] initWithFrame:CGRectMake(50, 0, 50, 50)];
+    up = [[UIButton alloc] initWithFrame:CGRectMake(50, 0, 50, 50)];
     up.backgroundColor = [UIColor colorWithRed:0.000 green:0.000 blue:1.000 alpha:0.123];
     up.layer.borderColor = [UIColor colorWithRed:0.000 green:0.000 blue:1.000 alpha:0.425].CGColor;
     up.layer.borderWidth = 1;
@@ -213,7 +217,7 @@ static float version = 167141100;
     [setting addTarget:self action:@selector(dismissRocker) forControlEvents:UIControlEventTouchDown];
     [self addSubview:setting];
 
-    UIButton *down = [[UIButton alloc] initWithFrame:CGRectMake(50, 100, 50, 50)];
+    down = [[UIButton alloc] initWithFrame:CGRectMake(50, 100, 50, 50)];
     [down setTitle:@"👇" forState:UIControlStateNormal];
     down.backgroundColor = [UIColor colorWithRed:0.000 green:0.000 blue:1.000 alpha:0.123];
     down.layer.borderColor = [UIColor colorWithRed:0.000 green:0.000 blue:1.000 alpha:0.425].CGColor;
@@ -223,7 +227,7 @@ static float version = 167141100;
     [self addSubview:down];
 
 
-    UIButton *left = [[UIButton alloc] initWithFrame:CGRectMake(0, 50, 50, 50)];
+    left = [[UIButton alloc] initWithFrame:CGRectMake(0, 50, 50, 50)];
     [left setTitle:@"👈" forState:UIControlStateNormal];
     left.backgroundColor = [UIColor colorWithRed:0.000 green:0.000 blue:1.000 alpha:0.123];
     left.layer.borderColor = [UIColor colorWithRed:0.000 green:0.000 blue:1.000 alpha:0.425].CGColor;
@@ -234,7 +238,7 @@ static float version = 167141100;
     [self addSubview:left];
 
 
-    UIButton *right = [[UIButton alloc] initWithFrame:CGRectMake(100, 50, 50, 50)];
+    right = [[UIButton alloc] initWithFrame:CGRectMake(100, 50, 50, 50)];
     [right setTitle:@"👉" forState:UIControlStateNormal];
     right.backgroundColor = [UIColor colorWithRed:0.000 green:0.000 blue:1.000 alpha:0.123];
     right.layer.borderColor = [UIColor colorWithRed:0.000 green:0.000 blue:1.000 alpha:0.425].CGColor;
@@ -246,7 +250,11 @@ static float version = 167141100;
 }
 
 - (void)dismissRocker {
-    self.hidden = !self.hidden;
+    /* Change the setting button function to switch direction buttons hidden value */
+    up.hidden = !up.hidden;
+    down.hidden = !down.hidden;
+    left.hidden = !left.hidden;
+    right.hidden = !right.hidden;
 }
 
 - (void)buttonAction:(UIButton *)sender {
