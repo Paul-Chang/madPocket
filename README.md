@@ -1,5 +1,8 @@
 ###Change
 This project is forked from [youngshook/PokemonHook](https://github.com/youngshook/PokemonHook). I change the fuction of the setting button to switch the hidden value of direction buttons.
+###To Do
+1. Display current location.
+2. Taxi
 
 ###How to install 
 
