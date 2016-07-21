@@ -22,4 +22,6 @@ This project is forked from [youngshook/PokemonHook](https://github.com/youngsho
 If you're a jailbreak user, you just need to install the PokemonGo Cracked ipa with iTune or XCode. You can find the ipa version PokemonGo in "adr.sPokemonGo.ipa.zip" at [my release page](https://github.com/aaaddress1/PokemonHook/releases).
 
 ###Feature
-![DEMO](http://ww4.sinaimg.cn/large/72f96cbajw1f5ummttxoag20af0ijnpd.gif)
+1. You can move with direction button on screen without going outside.
+2. Auto-Hatching Egg: The robot is able to hang out itself without your concern.
+![Demo.png](Demo.PNG)
