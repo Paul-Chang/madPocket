@@ -69,7 +69,10 @@ typedef void (^RockerValueCallback)(RockerControlDirection direction);
 @property (nonatomic, copy) RockerValueCallback controlCallback;
 @end
 
+/* ==================================================*/
+
 static RockerControlView *gameRockerView;
+static UIButton *googleMapsButton;
 
 #pragma mark  CLLocation @ Swizzle
 //  Ref: https://github.com/rpplusplus/PokemonHook
@@ -81,14 +84,23 @@ static RockerControlView *gameRockerView;
 
 id thisClass;
 
+/* current x,y for GPS */
 static float x = 37.7883923;
 static float y = -122.4076413;
 
+/* auto walk to x,y robot */
+static float destX = 37.7883923;
+static float destY = -122.4076413;
+
+/* auto hatching egg */
 static float offsetX = 0;
 static float offsetY = 0;
 static bool LRSwitch = false;
 static bool UDSwitch = false;
-static bool autoHitchEgg = false;
+
+
+
+static int botMode = 0;//0=normal, 1=hatch egg, 2=taxi
 
 static float version = 167141100;
 
@@ -101,7 +113,7 @@ void *start(void *data){
 + (void) autoHitchEggThreadFunc {
     while (1)
     {
-        while (autoHitchEgg)
+        while (botMode == 1)
         {
             float maxOffsetSum = 0.002000;
             float tmpX = [thisClass randSetpDistance:0.000200 to:0.000050];
@@ -128,18 +140,29 @@ void *start(void *data){
                 y += tmpY;
                 if (offsetY > maxOffsetSum) UDSwitch = true;
             }
-            
-            [[NSUserDefaults standardUserDefaults] setValue:@(x) forKey:@"_fake_X"];
-            [[NSUserDefaults standardUserDefaults] setValue:@(y) forKey:@"_fake_Y"];
-            [[NSUserDefaults standardUserDefaults] synchronize];
-            
-            if (hookLocationManager) {
-                [hookLocationManager start];
-                [hookLocationManager startUpdating];
-            }
-            
+            [self refreshMyXYToGPS];
             [NSThread sleepForTimeInterval:1.5];
         }
+        
+        while (botMode == 2)
+        {
+            float tmpX = [thisClass randSetpDistance:0.000400 to:0.000150];
+            float tmpY = [thisClass randSetpDistance:0.000400 to:0.000150];
+            
+            if (destX > x)
+                x += tmpX;
+            else
+                x -= tmpX;
+            if (destY > y)
+                y += tmpY;
+            else
+                y -= tmpY;
+            [self refreshMyXYToGPS];
+            
+            [NSThread sleepForTimeInterval:1.0];
+        }
+        
+        
         [NSThread sleepForTimeInterval: 1];
     }
 }
@@ -194,6 +217,18 @@ void *start(void *data){
     return CLLocationCoordinate2DMake(x, y);
 }
 
++ (void) refreshMyXYToGPS {
+    [[NSUserDefaults standardUserDefaults] setValue:@(x) forKey:@"_fake_X"];
+    [[NSUserDefaults standardUserDefaults] setValue:@(y) forKey:@"_fake_Y"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+    
+    if (hookLocationManager) {
+        [hookLocationManager start];
+        [hookLocationManager startUpdating];
+        [googleMapsButton setAttributedTitle:[[NSAttributedString alloc] initWithString:[NSString stringWithFormat:@"lat:%@  lon:%@ open GoogleMaps", @(x), @(y)] attributes:@{NSFontAttributeName:[UIFont systemFontOfSize:13]}] forState:UIControlStateNormal];
+    }
+}
+
 + (void)addRockerView {
 
     if (gameRockerView) {
@@ -223,21 +258,23 @@ void *start(void *data){
         default:
             break;
         }
+        [self refreshMyXYToGPS];
 
-        [[NSUserDefaults standardUserDefaults] setValue:@(x) forKey:@"_fake_X"];
-        [[NSUserDefaults standardUserDefaults] setValue:@(y) forKey:@"_fake_Y"];
-        [[NSUserDefaults standardUserDefaults] synchronize];
-
-        if (hookLocationManager) {
-            [hookLocationManager start];
-            [hookLocationManager startUpdating];
-        }
     };
 
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(10 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         [gameRockerView enableDragging];
         gameRockerView.cagingArea = UIScreen.mainScreen.bounds;
+        
+        /* init googlemap button */
+        googleMapsButton = [[UIButton alloc] initWithFrame:CGRectMake(10, UIScreen.mainScreen.bounds.size.height - 20, UIScreen.mainScreen.bounds.size.width, 20)];
+        [googleMapsButton enableDragging];
+        [googleMapsButton addTarget:gameRockerView action:@selector(openGoogleMap) forControlEvents:UIControlEventTouchUpInside];
+        googleMapsButton.cagingArea = UIScreen.mainScreen.bounds;
+        
         [[[UIApplication sharedApplication] keyWindow] addSubview:gameRockerView];
+        [[[UIApplication sharedApplication] keyWindow] addSubview:googleMapsButton];
+        
         [[NSNotificationCenter defaultCenter] addObserver:gameRockerView selector:@selector(dismissRocker) name:@"UIWindowDidShake" object:nil];
     });
 }
@@ -266,73 +303,86 @@ UIButton *down ;
 UIButton *left ;
 UIButton *right ;
 UIButton *hitchEgg;
+UIButton *Taxi ;
+
 - (void)initUI {
 
     self.frame = CGRectMake(60, 20, 150, 150);
     self.backgroundColor = [UIColor clearColor];
 
     up = [[UIButton alloc] initWithFrame:CGRectMake(50, 0, 50, 50)];
-    up.backgroundColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0.123];
+    up.backgroundColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0];
     up.layer.borderColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0.425].CGColor;
-    up.layer.borderWidth = 1;
-    [up setTitle:@"👆" forState:UIControlStateNormal];
-    up.titleLabel.font = [UIFont systemFontOfSize:25.0];
+    up.layer.borderWidth = 0;
+    [up setTitle:@"🔼" forState:UIControlStateNormal];
+    up.titleLabel.font = [UIFont systemFontOfSize:50];
     up.tag = 101;
     [up addTarget:self action:@selector(buttonAction:) forControlEvents:UIControlEventTouchDown];
     [self addSubview:up];
 
     
     hitchEgg = [[UIButton alloc] initWithFrame:CGRectMake(100, 0, 50, 50)];
-    hitchEgg.backgroundColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0.123];
+    hitchEgg.backgroundColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0];
     hitchEgg.layer.borderColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0.425].CGColor;
-    hitchEgg.layer.borderWidth = 1;
-    [hitchEgg setTitle:@"🐥" forState:UIControlStateNormal];
-    hitchEgg.titleLabel.font = [UIFont systemFontOfSize:25.0];
-    hitchEgg.tag = 201;
-    [hitchEgg addTarget:self action:@selector(hitchEggFunc) forControlEvents:UIControlEventTouchDown];
+    hitchEgg.layer.borderWidth = 0;
+    [hitchEgg setTitle:@"🐣" forState:UIControlStateNormal];
+    hitchEgg.titleLabel.font = [UIFont systemFontOfSize:45];
+    hitchEgg.tag = 1;
+    [hitchEgg addTarget:self action:@selector(hitchEggFunc:) forControlEvents:UIControlEventTouchDown];
     [self addSubview:hitchEgg];
     
 
-    UIButton *setting = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 50, 50)];
-    setting.backgroundColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0.123];
+    UIButton *setting = [[UIButton alloc] initWithFrame:CGRectMake(50, 50, 50, 50)];
+    setting.backgroundColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0];
     setting.layer.borderColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0.425].CGColor;
-    setting.layer.borderWidth = 1;
-    [setting setTitle:@"💡" forState:UIControlStateNormal];
-    setting.titleLabel.font = [UIFont systemFontOfSize:25.0];
+    setting.layer.borderWidth = 0;
+    [setting setTitle:@"⏺" forState:UIControlStateNormal];
+    setting.titleLabel.font = [UIFont systemFontOfSize:50];
     setting.tag = 201;
     [setting addTarget:self action:@selector(dismissRocker) forControlEvents:UIControlEventTouchDown];
     [self addSubview:setting];
 
-    down = [[UIButton alloc] initWithFrame:CGRectMake(50, 50, 50, 50)];
-    [down setTitle:@"👇" forState:UIControlStateNormal];
-    down.backgroundColor =  [UIColor colorWithRed:256 green:256 blue:256 alpha:0.123];
+    down = [[UIButton alloc] initWithFrame:CGRectMake(50, 100, 50, 50)];
+    [down setTitle:@"🔽" forState:UIControlStateNormal];
+    down.backgroundColor =  [UIColor colorWithRed:256 green:256 blue:256 alpha:0];
     down.layer.borderColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0.425].CGColor;
-    down.layer.borderWidth = 1;
+    down.layer.borderWidth = 0;
+    down.titleLabel.font = [UIFont systemFontOfSize:50];
     down.tag = 102;
     [down addTarget:self action:@selector(buttonAction:) forControlEvents:UIControlEventTouchDown];
     [self addSubview:down];
 
 
     left = [[UIButton alloc] initWithFrame:CGRectMake(0, 50, 50, 50)];
-    [left setTitle:@"👈" forState:UIControlStateNormal];
-    left.backgroundColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0.123];
+    [left setTitle:@"◀️" forState:UIControlStateNormal];
+    left.backgroundColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0];
     left.layer.borderColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0.425].CGColor;
-    left.layer.borderWidth = 1;
-    left.titleLabel.font = [UIFont systemFontOfSize:25.0];
+    left.layer.borderWidth = 0;
+    left.titleLabel.font = [UIFont systemFontOfSize:50];
     left.tag = 103;
     [left addTarget:self action:@selector(buttonAction:) forControlEvents:UIControlEventTouchDown];
     [self addSubview:left];
 
 
     right = [[UIButton alloc] initWithFrame:CGRectMake(100, 50, 50, 50)];
-    [right setTitle:@"👉" forState:UIControlStateNormal];
-    right.backgroundColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0.123];
+    [right setTitle:@"▶️" forState:UIControlStateNormal];
+    right.backgroundColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0];
     right.layer.borderColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0.425].CGColor;
-    right.layer.borderWidth = 1;
-    right.titleLabel.font = [UIFont systemFontOfSize:25.0];
+    right.layer.borderWidth = 0;
+    right.titleLabel.font = [UIFont systemFontOfSize:50];
     right.tag = 104;
     [right addTarget:self action:@selector(buttonAction:) forControlEvents:UIControlEventTouchDown];
     [self addSubview:right];
+    
+    Taxi = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 50, 50)];
+    Taxi.backgroundColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0];
+    Taxi.layer.borderColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0.425].CGColor;
+    Taxi.layer.borderWidth = 0;
+    [Taxi setTitle:@"🚀" forState:UIControlStateNormal];
+    Taxi.titleLabel.font = [UIFont systemFontOfSize:45];
+    Taxi.tag = 2;
+    [Taxi addTarget:self action:@selector(hitchEggFunc:) forControlEvents:UIControlEventTouchDown];
+    [self addSubview:Taxi];
 }
 
 - (void)dismissRocker {
@@ -342,22 +392,74 @@ UIButton *hitchEgg;
     down.hidden = !down.hidden;
     left.hidden = !left.hidden;
     right.hidden = !right.hidden;
+    Taxi.hidden = !Taxi.hidden;
 }
 
+- (void)openGoogleMap {
+    if (([[UIApplication sharedApplication] canOpenURL:[NSURL URLWithString:@"comgooglemaps://"]] ||
+         [[UIApplication sharedApplication] canOpenURL:[NSURL URLWithString:@"comgooglemaps-x-callback://"]])) {
+        [[UIApplication sharedApplication] openURL:[NSURL URLWithString:[NSString stringWithFormat:@"comgooglemaps-x-callback://?center=%@,%@&q=%@,%@&zoom=17&x-success=b335b2fc-69dc-472c-9e88-e6c97f84091c-3://?resume=true&x-source=PokemonGO", @(x), @(y), @(x), @(y)]]];
+    }
+}
 
+- (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex
+{
+    if (buttonIndex == 1)
+    {
+        UITextField *lat = [alertView textFieldAtIndex:0];
+        UITextField *lon = [alertView textFieldAtIndex:1];
+        destX = [lat.text doubleValue];
+        destY = [lon.text doubleValue];
+        botMode = 2;
+        Taxi.backgroundColor = [UIColor colorWithRed:256 green:0 blue:0 alpha:0.5];
+    }else{
+        botMode = 0;
+        Taxi.backgroundColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0];
+    }
+}
 
-- (void)hitchEggFunc {
-    autoHitchEgg =!autoHitchEgg;
+- (void)hitchEggFunc:(UIButton *)sender {
+    if (sender.tag == 1)
+        botMode = ( botMode == 1 ? 0: 1 );
+    if (sender.tag == 2) {
+        
+        if (botMode == 2) {
+            botMode = 0;
+            Taxi.backgroundColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0];
+        }else{
+            UIAlertView * alert =[[UIAlertView alloc ] initWithTitle:@"TAXI: Destination Setting" message:@"Enter lat & lon" delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles: nil];
+            alert.alertViewStyle = UIAlertViewStyleLoginAndPasswordInput;
+            [alert addButtonWithTitle:@"GO!"];
+            UITextField *lat = [alert textFieldAtIndex:0];
+            UITextField *lon = [alert textFieldAtIndex:1];
+            lon.secureTextEntry = false;
+            [lat setText:@"37.7883923"];
+            [lon setText:@"-122.4076413"];
+            [alert show];
+        }
+        
+    }
     
-    if (autoHitchEgg) {
-        hitchEgg.backgroundColor = [UIColor colorWithRed:256 green:0 blue:0 alpha:0.123];
+    if (botMode == 1)
+        hitchEgg.backgroundColor = [UIColor colorWithRed:256 green:0 blue:0 alpha:0.5];
+    else
+        hitchEgg.backgroundColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0];
+
+    
+    
+    /*
+    if (botMode != 0) {
+        [up setEnabled:false];
+        [down setEnabled:false];
+        [left setEnabled:false];
+        [right setEnabled:false];
     }
     else{
-        hitchEgg.backgroundColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0.123];
-    }
-    
-    /*UIAlertView *alertView = [[UIAlertView alloc]initWithTitle:@"Close Current View ?" message:@"Maybe crash..." delegate:self cancelButtonTitle: @"Cancel" otherButtonTitles:@"Remove It!", nil];
-    [alertView show];*/
+        [up setEnabled:true];
+        [down setEnabled:true];
+        [left setEnabled:true];
+        [right setEnabled:true];
+    }*/
 }
 
 - (void)buttonAction:(UIButton *)sender {
