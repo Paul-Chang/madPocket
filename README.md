@@ -1,9 +1,3 @@
-###Change
-This project is forked from [youngshook/PokemonHook](https://github.com/youngshook/PokemonHook). I change the fuction of the setting button to switch the hidden value of direction buttons.
-###To Do
-1. Display current location.
-2. Taxi
-
 ###How to install 
 
 0. Install Xcode from Apple Store. (at least 7.0)
@@ -24,7 +18,12 @@ This project is forked from [youngshook/PokemonHook](https://github.com/youngsho
 ###For Jailbreak User
 If you're a jailbreak user, you just need to install the PokemonGo Cracked ipa with iTune or XCode. You can find the ipa version PokemonGo in "adr.sPokemonGo.ipa.zip" at [my release page](https://github.com/aaaddress1/PokemonHook/releases).
 
+**p.s. You need to install some tweak for bypassing signature checking.**
+
 ###Feature
 1. You can move with direction button on screen without going outside.
 2. Auto-Hatching Egg: The robot is able to hang out itself without your concern.
+3. TAXI: The robot will walk back to destination you give.
+4. Display current location.
 ![Demo.png](Demo.PNG)
+![Demo.png](Demo1.PNG)
