@@ -18,7 +18,7 @@
 ###For Jailbreak User
 If you're a jailbreak user, you just need to install the PokemonGo Cracked ipa with iTune or XCode. You can find the ipa version PokemonGo in "adr.sPokemonGo.ipa.zip" at [my release page](https://github.com/aaaddress1/PokemonHook/releases).
 
-**p.s. You need to install some tweak for bypassing signature checking.**
+**p.s. You need to install some tweak for bypassing signature checking or jailbreak cheaking, e.g.tsProtector, AppSync**
 
 ###Feature
 1. You can move with direction button on screen without going outside.
