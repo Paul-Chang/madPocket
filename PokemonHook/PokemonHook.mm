@@ -26,21 +26,20 @@ inline void replaceImplementation(Class newClass, Class hookedClass, SEL sel, IM
 @interface NIAIosLocationManagerHook : NSObject
 + (void)locationUpdateHook;
 - (void)start;
-- (void)startUpdating;
 @end
 
 static NIAIosLocationManagerHook *hookLocationManager;
 
 @implementation NIAIosLocationManagerHook
 static IMP NIAIosLocationManager_start = NULL;
-static IMP NIAIosLocationManager_startUpdating = NULL;
 
+
+//-(void)locationManager:(id)manager didVisit:(id)visit;
 + (void)locationUpdateHook {
     Class hookedClass = objc_getClass("NIAIosLocationManager");
     SEL startSel = @selector(start);
     replaceImplementation([self class], hookedClass, startSel, NIAIosLocationManager_start);
-    SEL startUpdatingSel = @selector(startUpdating);
-    replaceImplementation([self class], hookedClass, startUpdatingSel, NIAIosLocationManager_startUpdating);
+    
 }
 
 - (void)start {
@@ -48,10 +47,7 @@ static IMP NIAIosLocationManager_startUpdating = NULL;
     hookLocationManager = self;
 }
 
-- (void)startUpdating {
-    NIAIosLocationManager_startUpdating(self, @selector(startUpdating));
-    hookLocationManager = self;
-}
+
 
 @end
 
@@ -85,12 +81,12 @@ static UIButton *googleMapsButton;
 id thisClass;
 
 /* current x,y for GPS */
-static float x = 37.7883923;
-static float y = -122.4076413;
+static float x =37.7883923;
+static float y =-122.4076413;
 
 /* auto walk to x,y robot */
-static float destX = 37.7883923;
-static float destY = -122.4076413;
+static float destX =37.7883923;
+static float destY =-122.4076413;
 
 /* auto hatching egg */
 static float offsetX = 0;
@@ -175,38 +171,30 @@ void *start(void *data){
     Method m2 = class_getInstanceMethod(self, @selector(coordinate_));
     method_exchangeImplementations(m1, m2);
     
-    if (![[NSUserDefaults standardUserDefaults] valueForKey:@"_fake_version"]) {
-        float _verison = [[[NSUserDefaults standardUserDefaults] valueForKey:@"_fake_version"] floatValue];
-        if (_verison < version) {
-            [[NSUserDefaults standardUserDefaults] setValue:@(x) forKey:@"_fake_X"];
-            [[NSUserDefaults standardUserDefaults] setValue:@(y) forKey:@"_fake_Y"];
-            [[NSUserDefaults standardUserDefaults] setValue:@(version) forKey:@"_fake_version"];
-            [[NSUserDefaults standardUserDefaults] synchronize];
-        }
-    }
-
-    if ([[NSUserDefaults standardUserDefaults] valueForKey:@"_fake_X"]) {
-        x = [[[NSUserDefaults standardUserDefaults] valueForKey:@"_fake_X"] floatValue];
-    }
-    if ([[NSUserDefaults standardUserDefaults] valueForKey:@"_fake_Y"]) {
-        y = [[[NSUserDefaults standardUserDefaults] valueForKey:@"_fake_Y"] floatValue];
-    }
-    
     [NIAIosLocationManagerHook locationUpdateHook];
     
     pthread_t thread;
     pthread_create(&thread, NULL, start, NULL);
     
     [self addRockerView];
-    
 
 }
 
 
-
-
 - (CLLocationCoordinate2D)coordinate_ {
-
+    CLLocationCoordinate2D pos = [self coordinate_];
+    
+    if (![[NSUserDefaults standardUserDefaults] valueForKey:@"_fake_version"]) {
+        float _verison = [[[NSUserDefaults standardUserDefaults] valueForKey:@"_fake_version"] floatValue];
+        if (_verison < version) {
+            x = pos.latitude;
+            y = pos.longitude;
+            [[NSUserDefaults standardUserDefaults] setValue:@(x) forKey:@"_fake_X"];
+            [[NSUserDefaults standardUserDefaults] setValue:@(y) forKey:@"_fake_Y"];
+            [[NSUserDefaults standardUserDefaults] setValue:@(version) forKey:@"_fake_version"];
+            [[NSUserDefaults standardUserDefaults] synchronize];
+        }
+    }
     if ([[NSUserDefaults standardUserDefaults] valueForKey:@"_fake_X"]) {
         x = [[[NSUserDefaults standardUserDefaults] valueForKey:@"_fake_X"] floatValue];
     }
@@ -224,7 +212,7 @@ void *start(void *data){
     
     if (hookLocationManager) {
         [hookLocationManager start];
-        [hookLocationManager startUpdating];
+
         [googleMapsButton setAttributedTitle:[[NSAttributedString alloc] initWithString:[NSString stringWithFormat:@"lat:%@  lon:%@ open GoogleMaps", @(x), @(y)] attributes:@{NSFontAttributeName:[UIFont systemFontOfSize:13]}] forState:UIControlStateNormal];
     }
 }
@@ -445,21 +433,6 @@ UIButton *Taxi ;
     else
         hitchEgg.backgroundColor = [UIColor colorWithRed:256 green:256 blue:256 alpha:0];
 
-    
-    
-    /*
-    if (botMode != 0) {
-        [up setEnabled:false];
-        [down setEnabled:false];
-        [left setEnabled:false];
-        [right setEnabled:false];
-    }
-    else{
-        [up setEnabled:true];
-        [down setEnabled:true];
-        [left setEnabled:true];
-        [right setEnabled:true];
-    }*/
 }
 
 - (void)buttonAction:(UIButton *)sender {
